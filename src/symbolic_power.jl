@@ -1,0 +1,297 @@
+###############################################################################
+#  Basic invariants: big height, heights of associated primes, minimal part
+###############################################################################
+
+@doc raw"""
+    big_height(I::MPolyIdeal) -> Int
+
+Return the big height of `I`, the largest height of an associated prime of `I`.
+
+# Examples
+```jldoctest
+julia> R, (x, y, z) = polynomial_ring(QQ, [:x, :y, :z]);
+
+julia> big_height(ideal(R, [x*(y^3 - z^3), y*(z^3 - x^3), z*(x^3 - y^3)]))
+2
+
+julia> big_height(ideal(R, [x, y^3, z^2]))
+3
+```
+"""
+function big_height(I::MPolyIdeal)
+  _check_ideal(I)
+  @req !_is_unit_ideal(I) "the unit ideal has no associated primes"
+  return maximum(codim(P) for P in _associated_primes(I))
+end
+
+@doc raw"""
+    associated_prime_heights(I::MPolyIdeal) -> Vector{Int}
+
+Return the sorted list of distinct heights of the associated primes of `I`.
+"""
+function associated_prime_heights(I::MPolyIdeal)
+  _check_ideal(I)
+  @req !_is_unit_ideal(I) "the unit ideal has no associated primes"
+  return sort(unique([codim(P) for P in _associated_primes(I)]))
+end
+
+@doc raw"""
+    minimal_part(I::MPolyIdeal) -> MPolyIdeal
+
+Return the intersection of the primary components of `I` that belong to the
+minimal primes of `I`, i.e. `I` with its embedded components removed.
+
+# Examples
+```jldoctest
+julia> R, (x, y) = polynomial_ring(QQ, [:x, :y]);
+
+julia> minimal_part(ideal(R, [x^2, x*y])) == ideal(R, [x])
+true
+```
+"""
+function minimal_part(I::MPolyIdeal)
+  _check_ideal(I)
+  _is_unit_ideal(I) && return I
+  minP = _defining_primes(I, true)
+  comps = [Q for (Q, P) in _primary_decomposition(I) if any(M -> M == P, minP)]
+  return _intersect_all(comps)
+end
+
+@doc raw"""
+    frobenius_power(I::MPolyIdeal, q::Int) -> MPolyIdeal
+
+Return the Frobenius power ``I^{[q]}``. For `q > 1`, the characteristic
+must be positive and `q` must be a power of that characteristic. The case
+`q = 1` returns `I` over any field. These restrictions ensure that the result
+is independent of the chosen generators.
+"""
+function frobenius_power(I::MPolyIdeal, q::Int)
+  R = _check_ideal(I)
+  _check_frobenius_exponent(R, q)
+  q == 1 && return I
+  return ideal(R, [g^q for g in gens(I)])
+end
+
+@doc raw"""
+    initial_degree(I::MPolyIdeal) -> Int
+
+Return the initial degree ``\alpha(I)``, the smallest degree of a nonzero
+element of the homogeneous ideal `I`. In a graded ring the degrees of the
+variables are used as weights; they must be positive integers. The ideal may be
+given by non-homogeneous generators, as long as it is homogeneous.
+
+# Examples
+```jldoctest
+julia> R, (x, y, z) = polynomial_ring(QQ, [:x, :y, :z]);
+
+julia> initial_degree(ideal(R, [x^3, y^2 + z^2, x*y*z]))
+2
+
+julia> G, (a, b) = graded_polynomial_ring(QQ, [:a, :b]; weights = [2, 3]);
+
+julia> initial_degree(ideal(G, [a^3, b^2]))
+6
+```
+"""
+function initial_degree(I::MPolyIdeal)
+  R = _check_ideal(I)
+  @req !is_zero(I) "the zero ideal has no initial degree"
+  w = _degree_weights(R)
+  G = _homogeneous_generators(I)
+  return minimum(_weighted_degree(f, w) for f in G if !iszero(f))
+end
+
+###############################################################################
+#  Symbolic powers
+###############################################################################
+
+const _METHODS = (:auto, :primary, :monomial, :saturation, :unmixed,
+  :complete_intersection, :join, :frobenius)
+
+@doc raw"""
+    symbolic_power(I::MPolyIdeal, n::Int; method::Symbol = :auto,
+                   use_minimal_primes::Bool = false) -> MPolyIdeal
+
+Return the `n`-th symbolic power of `I`,
+``I^{(n)} = \bigcap_{P \in \mathrm{Ass}(R/I)} (I^n R_P \cap R)``.
+
+With `use_minimal_primes = true` the intersection runs over the minimal primes
+of `I` only. Both definitions agree when `I` has no embedded primes.
+
+The following values of `method` are supported. Each method other than
+`:auto` and `:primary` checks its hypotheses and throws an `ArgumentError` if
+they fail.
+
+- `:monomial`: for monomial ideals, intersect the `n`-th powers of the
+  contractions ``Q_{\subseteq P} = IR_P \cap R`` for the maximal associated
+  primes `P` (Cooper–Embree–Hà–Hoefel), or for the minimal primes.
+- `:saturation`: for homogeneous ideals (positive ``\mathbb Z``-grading) with
+  ``\dim R/I = 1``, i.e. points in (weighted) projective space: ``I^n``
+  saturated with respect to the irrelevant ideal, unless that ideal is already
+  associated to `I`.
+- `:unmixed`: if all associated primes have the same height, the
+  equidimensional hull of ``I^n``.
+- `:complete_intersection`: if every primary component of `I` is a complete
+  intersection of height ``\operatorname{codim}(I)``, the intersection of their
+  `n`-th powers. In an ungraded ring the complete-intersection property is
+  checked with a heuristic, so valid inputs can be rejected.
+- `:join`: for radical ideals over a field of characteristic zero or a finite
+  field, the join ``I \star \mathfrak m^n`` (Zariski–Nagata, Sullivant). See
+  [`symbolic_power_join`](@ref).
+- `:frobenius`: for prime ideals in positive characteristic; see
+  [`symbolic_power_frobenius`](@ref).
+- `:primary`: the general method, via a primary decomposition of ``I^n``.
+- `:auto` (default): the first applicable of `:monomial`, `:saturation`,
+  `:unmixed` and `:primary` (only `:monomial` and `:primary` when
+  `use_minimal_primes = true`).
+
+The zeroth symbolic power is the unit ideal; for ``n \geq 1`` the zero ideal
+and the unit ideal are their own symbolic powers.
+
+Over some coefficient fields (for instance very small prime fields) OSCAR's
+primary decomposition may fail. The core computations of `:join` and
+`:frobenius` avoid primary decomposition, but their hypothesis checks (radical,
+prime) may not; see the `check` keyword of [`symbolic_power_join`](@ref) and
+[`symbolic_power_frobenius`](@ref).
+
+# Examples
+```jldoctest
+julia> R, (x, y, z) = polynomial_ring(QQ, [:x, :y, :z]);
+
+julia> I = ideal(R, [x*y, x*z, y*z]);
+
+julia> symbolic_power(I, 2) == I^2 + ideal(R, [x*y*z])
+true
+
+julia> symbolic_power(I, 2; method = :join) == symbolic_power(I, 2; method = :primary)
+true
+```
+"""
+function symbolic_power(I::MPolyIdeal, n::Int; method::Symbol=:auto,
+  use_minimal_primes::Bool=false)
+  R = _check_ideal(I)
+  _check_power(n)
+  @req method in _METHODS "unknown method $(method); use one of $(_METHODS)"
+  n == 0 && return _unit_ideal(R)
+  (_is_unit_ideal(I) || is_zero(I)) && return I
+  if n == 1 && method == :auto
+    return use_minimal_primes ? minimal_part(I) : I
+  end
+
+  if method == :auto
+    method = _choose_method(I, use_minimal_primes)
+  end
+
+  if method == :primary
+    return _symbolic_power_primary(I, n, use_minimal_primes)
+  elseif method == :monomial
+    return _symbolic_power_monomial(I, n, use_minimal_primes)
+  elseif method == :saturation
+    return _symbolic_power_saturation(I, n, use_minimal_primes)
+  elseif method == :unmixed
+    return _symbolic_power_unmixed(I, n)
+  elseif method == :complete_intersection
+    return _symbolic_power_ci(I, n)
+  elseif method == :join
+    return symbolic_power_join(I, n)
+  else # :frobenius
+    return symbolic_power_frobenius(I, n)
+  end
+end
+
+function _choose_method(I::MPolyIdeal, use_minimal_primes::Bool)
+  is_monomial(I) && return :monomial
+  use_minimal_primes && return :primary
+  R = base_ring(I)
+  if _has_positive_z_grading(R) && _is_homogeneous_ideal(I) && dim(I) == 1
+    return :saturation
+  end
+  big_height(I) == codim(I) && return :unmixed
+  return :primary
+end
+
+# General method. For a prime M, the contraction I^n R_M ∩ R is the
+# intersection of the primary components of I^n whose associated prime is
+# contained in M (this set of primes is closed under going down, so the result
+# does not depend on the decomposition). The power is passed in so that a
+# primary decomposition cached on it can be reused.
+function _symbolic_power_primary(I::MPolyIdeal, n::Int, use_minimal_primes::Bool,
+  power::MPolyIdeal=I^n)
+  n == 1 && return use_minimal_primes ? minimal_part(I) : I
+  targets = _defining_primes(I, use_minimal_primes)
+  # The selection rule is valid for every primary decomposition of the power,
+  # redundant or not (localization commutes with finite intersections), so the
+  # possibly large decomposition of I^n is not normalized. Only the defining
+  # primes, computed from I, must be genuine associated primes.
+  comps = [
+    Q for (Q, P) in primary_decomposition(power) if any(M -> is_subset(P, M), targets)
+  ]
+  return _intersect_all(comps)
+end
+
+# The contractions Q_{⊆M} = I R_M ∩ R, i.e. the intersections of the primary
+# components of I whose prime lies in M, for the defining primes M of I.
+function _localized_components(I::MPolyIdeal, use_minimal_primes::Bool)
+  pd = _primary_decomposition(I)
+  return [
+    _intersect_all([Q for (Q, P) in pd if is_subset(P, M)])
+    for M in _defining_primes(I, use_minimal_primes)
+  ]
+end
+
+# For a monomial ideal and a monomial prime M, (I^n) R_M ∩ R = (I R_M ∩ R)^n:
+# both are obtained by setting the variables outside M equal to 1. Hence
+# I^(n) is the intersection of the n-th powers of the localized components.
+function _symbolic_power_monomial(I::MPolyIdeal, n::Int, use_minimal_primes::Bool)
+  @req is_monomial(I) "method :monomial requires a monomial ideal"
+  if _is_squarefree_monomial_ideal(I)
+    # all associated primes are minimal, and I R_P ∩ R = P
+    return _intersect_all([P^n for P in minimal_primes(I)])
+  end
+  return _intersect_all([Q^n for Q in _localized_components(I, use_minimal_primes)])
+end
+
+function _symbolic_power_saturation(I::MPolyIdeal, n::Int, use_minimal_primes::Bool=false)
+  R = base_ring(I)
+  @req _has_positive_z_grading(R) && _is_homogeneous_ideal(I) && dim(I) == 1 "method :saturation requires a homogeneous ideal of Krull dimension 1 (positive grading)"
+  m = _maximal_homogeneous_ideal(R)
+  # The associated primes of I^n are the minimal primes of I and possibly m.
+  # If m is associated to I, the m-primary component is allowed as well
+  # (unless only minimal primes are used).
+  if !use_minimal_primes && !(saturation(I, m) == I)
+    return I^n
+  end
+  return saturation(I^n, m)
+end
+
+function _symbolic_power_unmixed(I::MPolyIdeal, n::Int)
+  @req big_height(I) == codim(I) "method :unmixed requires all associated primes to have the same height"
+  return equidimensional_hull(I^n)
+end
+
+function _symbolic_power_ci(I::MPolyIdeal, n::Int)
+  R = base_ring(I)
+  c = codim(I)
+  pd = _primary_decomposition(I)
+  # an irredundant decomposition has one component per associated prime
+  @req length(_unique_ideals([P for (_, P) in pd])) == length(pd) "unexpected primary decomposition with repeated primes"
+  for (Q, _) in pd
+    k = if R isa MPolyDecRing
+      length(minimal_generating_set(Q))
+    else
+      length(small_generating_set(Q))
+    end
+    @req k == c "method :complete_intersection requires every primary component to be a complete intersection of height $c"
+  end
+  return _intersect_all([Q^n for (Q, _) in pd])
+end
+
+@doc raw"""
+    min_degree_symbolic_power(I::MPolyIdeal, n::Int; kwargs...) -> Int
+
+Return ``\alpha(I^{(n)})``, the smallest degree of a nonzero element of the
+`n`-th symbolic power of the homogeneous ideal `I`. Keyword arguments are
+passed to [`symbolic_power`](@ref).
+"""
+min_degree_symbolic_power(I::MPolyIdeal, n::Int; kwargs...) =
+  initial_degree(symbolic_power(I, n; kwargs...))

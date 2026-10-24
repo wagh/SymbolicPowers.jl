@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  format:
+    name: JuliaFormatter
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: '1.10'
+      - uses: julia-actions/cache@v2
+      - name: Check OSCAR formatting
+        run: julia --startup-file=no -e 'using Pkg; Pkg.activate(; temp=true); Pkg.add(PackageSpec(name="JuliaFormatter", version="1.0.62")); using JuliaFormatter; @assert format(".")'
+
+  test:
+    name: Julia ${{ matrix.julia }} / OSCAR ${{ matrix.oscar }} / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - julia: '1.10'
+            oscar: '1.8.0'
+            os: ubuntu-latest
+          - julia: '1'
+            oscar: '1'
+            os: ubuntu-latest
+          - julia: '1'
+            oscar: '1'
+            os: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: ${{ matrix.julia }}
+      - uses: julia-actions/cache@v2
+      - name: Resolve selected OSCAR version
+        env:
+          OSCAR_TEST_VERSION: ${{ matrix.oscar }}
+        run: julia --project=. -e 'using Pkg; Pkg.add(PackageSpec(name="Oscar", version=ENV["OSCAR_TEST_VERSION"]))'
+      - uses: julia-actions/julia-buildpkg@v1
+      - uses: julia-actions/julia-runtest@v1
+
+  docs:
+    name: Manual and doctests
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: '1.10'
+      - uses: julia-actions/cache@v2
+      - name: Install documentation environment
+        run: julia --project=docs -e 'using Pkg; Pkg.develop(path="."); Pkg.instantiate()'
+      - name: Build manual with doctests
+        run: julia --project=docs docs/make.jl
