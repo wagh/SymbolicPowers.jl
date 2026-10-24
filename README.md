@@ -1,0 +1,1 @@
+# SymbolicPowers.jl
