@@ -73,13 +73,28 @@ it must only be used when the hypothesis is known to hold.
 
 ## Performance notes
 
-- OSCAR caches primary decompositions on ideal objects; helpers such as
-  `_associated_primes` and `_defining_primes` rely on this. Number-field
-  decompositions are normalized once and cached separately.
+- Reuse the same ideal object when computing several exponents. The package
+  caches minimal and associated primes, the defining primes for each symbolic
+  convention, and localized components on that object. The two conventions
+  have separate cache keys. These caches supplement OSCAR's decomposition
+  caches without modifying them. Number-field decompositions are normalized
+  once and cached separately.
+- Structural caches are independent of the exponent. The package does not
+  retain every computed symbolic power indefinitely. As with OSCAR's own
+  cached ideal invariants, do not mutate an ideal's generators or its cached
+  mathematical data after computing invariants; construct a new ideal instead.
 - Containment searches gallop from `n` and cache symbolic powers, so the
   largest symbolic power computed is at most about twice the answer;
   `lower_bound_resurgence` shares the cache between different `n`.
-- `is_symbolic_equal_ordinary` compares associated primes only.
+- `is_symbolic_equal_ordinary` checks direct containment for monomial ideals,
+  avoiding primary decomposition of the ordinary power. Other ideals use the
+  associated-prime criterion.
+- Monomial symbolic defects count minimal symbolic generators outside the
+  ordinary power, avoiding quotient-module construction. Other ideals use a
+  minimal generating set in the quotient ring.
+- Squarefree symbolic polyhedra are built directly from their coordinate-prime
+  inequalities. Waldschmidt constants request an exact rational linear-program
+  minimum rather than collecting and inspecting every vertex in Julia.
 - `is_konig`, `is_packed` and `non_packed_substitutions` work on the supports
   of the minimal generators; no ideal arithmetic is needed for the minors.
 - The initial degree of a homogeneous ideal is read off homogeneous
@@ -92,3 +107,9 @@ it must only be used when the hypothesis is known to hold.
   into minimal primes.
 
 `benchmark/smoke.jl` prints a few timings.
+
+Measure both fresh ideals and repeated calls on the same ideal after an
+untimed warm-up. Julia compilation and package loading can dominate a first
+call, while fresh ideals do not benefit from structural caches. Report these
+costs separately from steady-state algebra. Proper positive weights can also
+make a weighted-homogeneous problem substantially easier for the backend.

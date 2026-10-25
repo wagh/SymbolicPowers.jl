@@ -67,9 +67,23 @@ end
 
 # Distinct associated primes of I. Both the backend decomposition and its
 # number-field normalization are cached on the ideal object.
-function _associated_primes(I::MPolyIdeal)
-  pd = _primary_decomposition(I)
-  return _unique_ideals([P for (_, P) in pd])
+function _associated_primes(I::T) where {T<:MPolyIdeal}
+  return get_attribute!(I, :symbolic_powers_associated_primes) do
+    # A squarefree monomial ideal is radical, so every associated prime is
+    # minimal. Share the same computation with the monomial power routine.
+    _is_squarefree_monomial_ideal(I) && return _minimal_primes(I)
+    pd = _primary_decomposition(I)
+    _unique_ideals([P for (_, P) in pd])
+  end::Vector{T}
+end
+
+# Some OSCAR versions read but do not populate :minimal_primes on the
+# ordinary polynomial-ring path. Keep a package-owned cache without changing
+# the backend's attributes. Only data independent of the exponent are retained.
+function _minimal_primes(I::T) where {T<:MPolyIdeal}
+  return get_attribute!(I, :symbolic_powers_minimal_primes) do
+    minimal_primes(I)
+  end::Vector{T}
 end
 
 # Elements of L that are maximal (resp. minimal) with respect to inclusion.
@@ -84,9 +98,16 @@ end
 # The primes P used in the definition of the symbolic powers: the maximal
 # associated primes (default) or the minimal primes. A primary component of a
 # power of I survives in the symbolic power iff its prime lies in one of them.
-function _defining_primes(I::MPolyIdeal, use_minimal_primes::Bool)
-  primes = _associated_primes(I)
-  return use_minimal_primes ? _minimal_elements(primes) : _maximal_elements(primes)
+function _defining_primes(I::T, use_minimal_primes::Bool) where {T<:MPolyIdeal}
+  key = if use_minimal_primes
+    :symbolic_powers_minimal_defining_primes
+  else
+    :symbolic_powers_maximal_defining_primes
+  end
+  return get_attribute!(I, key) do
+    primes = _associated_primes(I)
+    use_minimal_primes ? _minimal_elements(primes) : _maximal_elements(primes)
+  end::Vector{T}
 end
 
 # Intersection of a nonempty list of ideals.

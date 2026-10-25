@@ -92,6 +92,10 @@ Thus powers can be taken after contracting, and the relevant contractions can
 then be intersected. Squarefree monomial ideals have coordinate prime primary
 components, giving the familiar intersection ``\bigcap_P P^n``.
 
+Minimal primes and localized components are independent of ``n``. The package
+keeps them on the input ideal object for reuse across exponents. Localized
+components for the two symbolic conventions are cached separately.
+
 ## Dimension-one saturation and unmixed ideals
 
 With positive weights and quotient dimension one, the only possible embedded
@@ -162,9 +166,12 @@ primes are exactly ``S``. Hence
 I^{(n)}=I^n\iff S=\operatorname{Ass}(R/I^n).
 ```
 
-`is_symbolic_equal_ordinary` therefore only compares primes and never forms an
-intersection. For the minimal-prime convention the criterion says that ``I^n``
-has no embedded primes.
+For nonmonomial ideals, `is_symbolic_equal_ordinary` uses this prime criterion.
+For monomial ideals, forming the symbolic power and testing
+``I^{(n)}\subseteq I^n`` avoids decomposing ``I^n``. The reverse containment
+``I^n\subseteq I^{(n)}`` holds for either convention, so this test decides
+equality. For the minimal-prime convention the prime criterion says that
+``I^n`` has no embedded primes.
 
 ## Containment searches
 

@@ -114,11 +114,24 @@ attainment along an infinite subsequence.
 With the minimal-prime flag the polyhedron uses the corresponding isolated
 components and the same argument applies.
 
+For a squarefree ideal the components are coordinate primes
+``P_C=(x_i:i\in C)``. Their Newton polyhedra are defined by ``u_i\geq0`` and
+``\sum_{i\in C}u_i\geq1``. The implementation assembles these inequalities
+directly. It minimizes the positive degree weights by an exact rational
+linear program. General monomial ideals retain the full Newton-polyhedron
+construction; replacing their components by radical support inequalities
+would lose exponent data and give incorrect answers.
+
 ## Symbolic defect and regularity
 
 `symbolic_defect(I,n)` is the minimal number of homogeneous module generators
-of ``I^{(n)}/I^n``. It is computed as an ideal in ``R/I^n``. It is not the
-difference between the numbers of generators of the two ideals.
+of ``I^{(n)}/I^n``. For general homogeneous ideals it is computed as an ideal
+in ``R/I^n``. For monomial ideals, write ``G`` for the minimal monomial
+generators of ``I^{(n)}``. The answer is the number of ``g\in G`` with
+``g\notin I^n``: these are exactly the monomial basis classes in
+``I^{(n)}/(\mathfrak m I^{(n)}+I^n)``. Distinct minimal generators cannot
+divide one another. This avoids the quotient-module construction. The defect
+is not the difference between the numbers of generators of the two ideals.
 
 `symbolic_regularity_samples` uses standard Castelnuovo-Mumford regularity
 of the ideal as a module, not the regularity of its quotient. It requires the

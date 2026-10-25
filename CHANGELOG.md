@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.3.3
+
+- Cache exponent-independent minimal primes, associated primes, defining
+  primes, and localized components on each input ideal, with separate keys
+  for the two symbolic conventions and without modifying OSCAR's caches.
+- Decide monomial symbolic/ordinary equality by direct containment, avoiding
+  primary decomposition of the ordinary power.
+- Compute monomial symbolic defects by surviving minimal monomial generators
+  instead of constructing a quotient module.
+- Assemble squarefree symbolic polyhedra directly from coordinate-prime
+  inequalities, and compute Waldschmidt constants with an exact rational LP.
+- Add reuse, convention-isolation, quotient-module-reference, polyhedron,
+  finite-field, and weighted-grading regression checks. Explain the shortcuts
+  and cache assumptions in the manual.
+
 ## 0.3.2
 
 - The primary method no longer normalizes the decomposition of `I^n` over

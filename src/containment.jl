@@ -8,10 +8,12 @@
 
 Return whether ``I^{(n)} = I^n``.
 
-The test only compares associated primes: ``I^{(n)} = I^n`` holds exactly when
+For monomial ideals, the test checks ``I^{(n)} \subseteq I^n`` directly; the
+reverse containment always holds. For other ideals, the test compares
+associated primes: ``I^{(n)} = I^n`` holds exactly when
 every associated prime of ``I^n`` is contained in a maximal associated prime of
 `I` (respectively, with `use_minimal_primes = true`, when ``I^n`` has no
-embedded primes). No intersection of ideals is computed.
+embedded primes).
 
 # Examples
 ```jldoctest
@@ -34,6 +36,9 @@ function is_symbolic_equal_ordinary(I::MPolyIdeal, n::Int; use_minimal_primes::B
   _check_power(n)
   (n == 0 || _is_unit_ideal(I) || is_zero(I)) && return true
   !use_minimal_primes && n == 1 && return true
+  if is_monomial(I)
+    return is_subset(symbolic_power(I, n; use_minimal_primes), I^n)
+  end
   # The primes of the components kept in I^(n) form a subset S of Ass(I^n)
   # that is closed under going down; then Ass(I^(n)) = S, so I^(n) = I^n iff
   # S = Ass(I^n).

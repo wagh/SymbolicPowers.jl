@@ -231,12 +231,19 @@ end
 
 # The contractions Q_{⊆M} = I R_M ∩ R, i.e. the intersections of the primary
 # components of I whose prime lies in M, for the defining primes M of I.
-function _localized_components(I::MPolyIdeal, use_minimal_primes::Bool)
-  pd = _primary_decomposition(I)
-  return [
-    _intersect_all([Q for (Q, P) in pd if is_subset(P, M)])
-    for M in _defining_primes(I, use_minimal_primes)
-  ]
+function _localized_components(I::T, use_minimal_primes::Bool) where {T<:MPolyIdeal}
+  key = if use_minimal_primes
+    :symbolic_powers_minimal_localized_components
+  else
+    :symbolic_powers_maximal_localized_components
+  end
+  return get_attribute!(I, key) do
+    pd = _primary_decomposition(I)
+    [
+      _intersect_all([Q for (Q, P) in pd if is_subset(P, M)])
+      for M in _defining_primes(I, use_minimal_primes)
+    ]
+  end::Vector{T}
 end
 
 # For a monomial ideal and a monomial prime M, (I^n) R_M ∩ R = (I R_M ∩ R)^n:
@@ -246,7 +253,7 @@ function _symbolic_power_monomial(I::MPolyIdeal, n::Int, use_minimal_primes::Boo
   @req is_monomial(I) "method :monomial requires a monomial ideal"
   if _is_squarefree_monomial_ideal(I)
     # all associated primes are minimal, and I R_P ∩ R = P
-    return _intersect_all([P^n for P in minimal_primes(I)])
+    return _intersect_all([P^n for P in _minimal_primes(I)])
   end
   return _intersect_all([Q^n for Q in _localized_components(I, use_minimal_primes)])
 end

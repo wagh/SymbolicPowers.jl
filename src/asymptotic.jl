@@ -22,6 +22,13 @@ function symbolic_defect(I::MPolyIdeal, n::Int; kwargs...)
   _check_power(n)
   (n == 0 || is_zero(I) || _is_unit_ideal(I)) && return 0
   S = symbolic_power(I, n; kwargs...)
+  if is_monomial(I)
+    _degree_weights(base_ring(I)) # Keep the positive-grading requirement.
+    Q = I^n
+    # Distinct minimal monomial generators cannot generate one another modulo
+    # a monomial subideal. Exactly those outside Q survive in S/(m*S + Q).
+    return count(m -> !(m in Q), _minimal_monomial_generators(S))
+  end
   Ig, Sg = _graded_copies(I, S)
   T = base_ring(Ig)
   A, pr = quo(T, Ig^n)
@@ -67,9 +74,27 @@ true
 ```
 """
 function symbolic_polyhedron(I::MPolyIdeal; use_minimal_primes::Bool=false)
-  _check_ideal(I)
+  R = _check_ideal(I)
   @req is_monomial(I) "the symbolic polyhedron is only defined for monomial ideals"
   @req !_is_unit_ideal(I) && !is_zero(I) "the ideal must be nonzero and proper"
+  if _is_squarefree_monomial_ideal(I)
+    # For P = (x_i : i in C), Newt(P) is given by u >= 0 and
+    # sum(u[i] for i in C) >= 1. Build the intersection directly as A*u <= b.
+    primes = _minimal_primes(I)
+    d = ngens(R)
+    A = zeros(Int, d + length(primes), d)
+    b = zeros(Int, d + length(primes))
+    for i in 1:d
+      A[i, i] = -1
+    end
+    for (j, P) in enumerate(primes)
+      for e in _monomial_supports(P), i in e
+        A[d + j, i] = -1
+      end
+      b[d + j] = -1
+    end
+    return polyhedron(QQ, A, b)
+  end
   polys = [
     _newton_polyhedron(Q) for Q in _localized_components(I, use_minimal_primes)
   ]
@@ -103,7 +128,7 @@ function waldschmidt_constant(I::MPolyIdeal; use_minimal_primes::Bool=false)
   @req is_monomial(I) "exact Waldschmidt constants are implemented for monomial ideals; use waldschmidt_upper_bound for samples"
   w = _degree_weights(R)
   N = symbolic_polyhedron(I; use_minimal_primes)
-  return minimum(sum(QQ(w[i]) * v[i] for i in eachindex(w)) for v in vertices(N))
+  return optimal_value(linear_program(N, w; convention=:min))::QQFieldElem
 end
 
 @doc raw"""
