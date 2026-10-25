@@ -125,7 +125,14 @@ function symbolic_power_frobenius(P::MPolyIdeal, n::Int; check::Bool=true)
   end
   e = ZZ(h) * (q - 1) - n + 1
   @req q <= typemax(Int) && e <= typemax(Int) "the Frobenius exponent is too large for this implementation"
-  Pq = frobenius_power(P, Int(q))
-  e <= 0 && return Pq
-  return quotient(Pq, P^Int(e))
+  Q = frobenius_power(P, Int(q))
+  # Compute P^[q] : P^e as ((P^[q] : P) : P) ... : P, using (I : J) : K = I : JK.
+  # The power P^e has very many (and redundant) generators, and one quotient
+  # by it is much slower than e quotients by P: for (t^3, t^4, t^5) over GF(5)
+  # and n = 6 (q = 25, e = 43) 250 s against 5.4 s. Quotients by blocks P^k,
+  # k = 2, 3, 4, 6, were slower than k = 1 in every tested case.
+  for _ in 1:Int(e)
+    Q = quotient(Q, P)
+  end
+  return Q
 end

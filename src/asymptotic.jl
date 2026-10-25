@@ -231,7 +231,11 @@ function symbolic_regularity_samples(I::MPolyIdeal; sample_size::Int=10, kwargs.
   vals = NamedTuple{(:power, :regularity, :ratio),Tuple{Int,Int,QQFieldElem}}[]
   for n in 1:sample_size
     (S,) = _graded_copies(symbolic_power(I, n; kwargs...))
-    r = Int(cm_regularity(S))
+    # cm_regularity resolves the ideal starting from the generators it is
+    # given, and symbolic powers usually come with many redundant ones (8
+    # points in P^2, n = 4: 79 s instead of 0.04 s). A minimal generating set
+    # generates the same ideal, hence gives the same regularity.
+    r = Int(cm_regularity(ideal(base_ring(S), minimal_generating_set(S))))
     push!(vals, (power=n, regularity=r, ratio=QQ(r, n)))
   end
   return vals

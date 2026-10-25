@@ -110,11 +110,23 @@ function _defining_primes(I::T, use_minimal_primes::Bool) where {T<:MPolyIdeal}
   end::Vector{T}
 end
 
-# Intersection of a nonempty list of ideals.
+# Intersection of a nonempty list of ideals. The strategy only affects the
+# generating set of the result, never the ideal.
+#
+# Singular intersects a whole list in one Gröbner basis computation over a
+# module with one component per ideal. For ideals given by monomials this is
+# faster than folding (edge ideal of C9, twelve 5th powers of primes: 1.8 s
+# against 5.2 s), but for other ideals the large module computation is far
+# slower than intersecting two at a time (ten 4th powers of the components of
+# the Fermat ideal of degree 5: over 20 s against 0.7 s; eight 6th powers of
+# points in P^2: 12 s with a balanced tree, 0.6 s with a left fold). Folding
+# in the given order was the fastest pairwise strategy in these experiments.
 function _intersect_all(L::Vector{T}) where {T<:MPolyIdeal}
   @req !isempty(L) "cannot intersect an empty list of ideals"
   length(L) == 1 && return L[1]
-  return intersect(L...)
+  length(L) == 2 && return intersect(L[1], L[2])
+  all(J -> all(_is_monomial_poly, gens(J)), L) && return intersect(L...)
+  return foldl(intersect, L)
 end
 
 ###############################################################################
