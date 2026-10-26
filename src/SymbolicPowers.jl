@@ -55,6 +55,7 @@ export associated_prime_heights,
 include("utils.jl")
 include("monomial.jl")
 include("symbolic_power.jl")
+include("points.jl")
 include("join.jl")
 include("containment.jl")
 include("packing.jl")
