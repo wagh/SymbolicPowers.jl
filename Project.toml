@@ -1,7 +1,7 @@
 name = "SymbolicPowers"
 uuid = "b344f83e-b3a1-4704-807a-e0cb74429eec"
 authors = ["Vinay Wagh <waghoba@gmail.com>"]
-version = "0.3.3"
+version = "0.3.4"
 
 [deps]
 Oscar = "f1435218-dba5-11e9-1e4d-f1a5fab5fc13"

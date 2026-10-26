@@ -1,5 +1,40 @@
 # Changelog
 
+## 0.3.4
+
+Performance release. Results are unchanged (generator sets may differ). On a
+128-case benchmark shared with the Macaulay2 package `SymbolicPowers` 2.0, the
+total time drops from 506 s (0.3.3) to 14 s (Macaulay2: 290 s); no case is
+slower than 0.3.3 or than Macaulay2, and all results agree with Macaulay2.
+
+- Monomial ideals: a combinatorial engine on exponent vectors
+  (`src/monomial.jl`) replaces Gröbner bases and primary decompositions in the
+  monomial paths: symbolic powers, minimal and associated primes, big height,
+  heights of associated primes, `minimal_part`, containment searches,
+  `is_symbolic_equal_ordinary` and the symbolic defect. 13-24x on the larger
+  benchmark cases. The squarefree prime caches no longer share one vector.
+- Points (homogeneous, dimension one): over QQ and finite fields, schemes of
+  (fat) rational points are recognized by projections, certified, and their
+  symbolic powers computed as intersections of powers of the point ideals
+  instead of saturating `I^n` (8 points in P^2, n = 6: 25 s -> 0.4 s).
+- Method selection: unmixedness is decided by comparing `I` with its
+  equidimensional hull, without a primary decomposition of `I`; `big_height`
+  and `associated_prime_heights` use this as well. Ideals that are not
+  unmixed (and dimension-one ideals under the minimal-prime convention without
+  a points shortcut) use a componentwise method: the power of each isolated
+  primary component is hulled separately, and only the part below embedded
+  defining primes needs a primary decomposition of its power (non-homogeneous
+  mixed ideal, n = 5: 55 s -> 0.06 s). For the minimal-prime convention,
+  `:auto` now also uses `:saturation` (through its shortcuts) and `:unmixed`.
+- `symbolic_power_frobenius` computes `P^[q] : P^e` as `e` successive
+  quotients by `P` (curve `(t^3,t^4,t^5)` over GF(5), n = 6: 245 s -> 5 s).
+- Intersections of several non-monomial ideals are folded pairwise
+  (complete-intersection method, Fermat quintic, n = 4: 22 s -> 1.3 s).
+- `symbolic_regularity_samples` passes a minimal generating set to
+  `cm_regularity` (8 points in P^2, 4 samples: 82 s -> 0.14 s).
+- New regression tests compare every shortcut with the general methods
+  (19,756 tests in total).
+
 ## 0.3.3
 
 - Cache exponent-independent minimal primes, associated primes, defining
