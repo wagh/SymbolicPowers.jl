@@ -147,7 +147,8 @@ they fail.
 - `:primary`: the general method, via a primary decomposition of ``I^n``.
 - `:auto` (default): the first applicable of `:monomial`, `:saturation`,
   `:unmixed` and `:primary` (only `:monomial`, `:saturation` and `:primary`
-  when `use_minimal_primes = true`).
+  when `use_minimal_primes = true`, where `:saturation` is chosen only for
+  complete intersections and schemes of rational points).
 
 The zeroth symbolic power is the unit ideal; for ``n \geq 1`` the zero ideal
 and the unit ideal are their own symbolic powers.
@@ -206,9 +207,14 @@ end
 function _choose_method(I::MPolyIdeal, use_minimal_primes::Bool)
   is_monomial(I) && return :monomial
   R = base_ring(I)
-  # :saturation supports both conventions
   if _has_positive_z_grading(R) && _is_homogeneous_ideal(I) && dim(I) == 1
-    return :saturation
+    !use_minimal_primes && return :saturation
+    # For the minimal-prime convention, :saturation only pays off through its
+    # shortcuts (both cached on I); saturating I^n by m is often much slower
+    # than :primary there, for instance for conjugate pairs of points over QQ.
+    if _is_points_complete_intersection(I) || _rational_point_components(I) !== nothing
+      return :saturation
+    end
   end
   use_minimal_primes && return :primary
   big_height(I) == codim(I) && return :unmixed
