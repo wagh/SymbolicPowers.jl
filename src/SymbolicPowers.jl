@@ -53,6 +53,7 @@ export associated_prime_heights,
   waldschmidt_upper_bound
 
 include("utils.jl")
+include("monomial.jl")
 include("symbolic_power.jl")
 include("join.jl")
 include("containment.jl")

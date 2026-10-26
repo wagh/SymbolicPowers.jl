@@ -246,4 +246,5 @@ using SymbolicPowers
   include("monomial_oracle.jl")
   include("review_regressions.jl")
   include("performance_regressions.jl")
+  include("monomial_engine_tests.jl")
 end

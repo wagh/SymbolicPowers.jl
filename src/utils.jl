@@ -70,8 +70,9 @@ end
 function _associated_primes(I::T) where {T<:MPolyIdeal}
   return get_attribute!(I, :symbolic_powers_associated_primes) do
     # A squarefree monomial ideal is radical, so every associated prime is
-    # minimal. Share the same computation with the monomial power routine.
-    _is_squarefree_monomial_ideal(I) && return _minimal_primes(I)
+    # minimal. Share the same computation with the monomial power routine,
+    # but cache a separate vector so that the two attributes do not alias.
+    _is_squarefree_monomial_ideal(I) && return copy(_minimal_primes(I))
     pd = _primary_decomposition(I)
     _unique_ideals([P for (_, P) in pd])
   end::Vector{T}
@@ -82,7 +83,11 @@ end
 # the backend's attributes. Only data independent of the exponent are retained.
 function _minimal_primes(I::T) where {T<:MPolyIdeal}
   return get_attribute!(I, :symbolic_powers_minimal_primes) do
-    minimal_primes(I)
+    # For monomial generators, the minimal primes are the coordinate primes
+    # of the minimal transversals of the supports (src/monomial.jl).
+    _has_monomial_generators(I) || return minimal_primes(I)
+    R = base_ring(I)
+    T[_mono_prime(R, S) for S in _mono_minimal_supports(I)]
   end::Vector{T}
 end
 
@@ -216,35 +221,22 @@ end
 
 _is_monomial_poly(f::MPolyRingElem) = length(f) == 1
 
-# Minimal monomial generators (monic) of a monomial ideal. If the given
-# generators are monomials no Gröbner basis is needed.
+# Minimal monomial generators (monic) of a monomial ideal, sorted by total
+# degree and exponent vector. If the given generators are monomials no Gröbner
+# basis is needed; the reduction is done on exponent vectors (src/monomial.jl).
 function _minimal_monomial_generators(I::MPolyIdeal)
   R = base_ring(I)
   @req is_monomial(I) "the ideal must be a monomial ideal"
-  is_zero(I) && return elem_type(R)[]
-  supplied = filter(!iszero, gens(I))
-  G = if all(_is_monomial_poly, supplied)
-    supplied
-  else
-    gens(groebner_basis(I; complete_reduction=true))
-  end
-  mons = unique([monomial(f, 1) for f in G if !iszero(f)])
-  exps = [exponent_vector(m, 1) for m in mons]
-  keep = [
-    i for i in eachindex(mons) if
-    !any(j -> exps[j] != exps[i] && all(exps[j] .<= exps[i]), eachindex(mons))
-  ]
-  return sort(mons[keep]; by=m -> (total_degree(m), exponent_vector(m, 1)))
+  return _mono_monomials(R, _mono_exponents(I))
 end
 
 function _is_squarefree_monomial_ideal(I::MPolyIdeal)
   is_monomial(I) || return false
-  return all(m -> all(<=(1), exponent_vector(m, 1)), _minimal_monomial_generators(I))
+  return all(e -> all(<=(1), e), _mono_exponents(I))
 end
 
 # Supports of the minimal monomial generators, as sets of variable indices.
-_monomial_supports(I::MPolyIdeal) =
-  [BitSet(findall(>(0), exponent_vector(m, 1))) for m in _minimal_monomial_generators(I)]
+_monomial_supports(I::MPolyIdeal) = [_mono_support(e) for e in _mono_exponents(I)]
 
 ###############################################################################
 #  Frobenius exponents
