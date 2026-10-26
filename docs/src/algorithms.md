@@ -11,7 +11,7 @@ end
 
 | Method | Required hypotheses | Computation |
 |:--|:--|:--|
-| `:auto` | Polynomial ideal over a supported field | Selects monomial, dimension-one saturation, unmixed hull, or primary decomposition |
+| `:auto` | Polynomial ideal over a supported field | Selects monomial, dimension-one saturation, unmixed hull, or a componentwise primary method |
 | `:primary` | General supported polynomial ideal | Decompose the ordinary power and retain components selected by localization |
 | `:monomial` | Monomial ideal | Intersect powers of contractions to the relevant coordinate primes |
 | `:saturation` | Homogeneous for positive integer weights; quotient dimension one | Saturate the ordinary power at the irrelevant ideal, subject to embedded-prime convention; for rational points, intersect powers of the point ideals |
@@ -20,9 +20,11 @@ end
 | `:join` | Radical ideal; coefficient field characteristic zero or finite | Eliminate in a doubled variable ring |
 | `:frobenius` | Prime ideal; positive characteristic | A Frobenius power followed by ideal quotients by the prime |
 
-With `method = :auto` the first applicable of `:monomial`, `:saturation`,
-`:unmixed` and `:primary` is used (only `:monomial`, `:saturation` and
-`:primary` for the minimal-prime convention). Homogeneity is decided for the ideal, not for the
+With `method = :auto` the first applicable of `:monomial`, `:saturation` and
+`:unmixed` is used, for either convention (for the minimal-prime convention,
+`:saturation` only for complete intersections and schemes of rational
+points); otherwise a componentwise variant of `:primary` (see below).
+Homogeneity is decided for the ideal, not for the
 given generators: if these are not homogeneous, a reduced Gröbner basis is
 inspected, which for a homogeneous ideal consists of homogeneous polynomials
 for every monomial ordering.
@@ -263,7 +265,67 @@ certified.
 
 For an unmixed ideal of height ``h``, the primes selected by the definition
 are exactly the minimal primes, all of height ``h``. The equidimensional hull
-of ``I^n`` keeps precisely their primary components.
+of ``I^n`` keeps precisely their primary components. Since an unmixed ideal
+has no embedded primes, this is the symbolic power for both conventions.
+`:auto` therefore uses `:saturation` and `:unmixed` for the minimal-prime
+convention as well.
+
+### Deciding unmixedness
+
+The equidimensional hull ``\operatorname{hull}(I)`` is the intersection of the
+primary components of ``I`` of maximal dimension. So
+``I\subseteq\operatorname{hull}(I)``, with equality if and only if every
+associated prime has dimension ``\dim R/I``, i.e. height
+``\operatorname{codim}(I)``. The automatic method choice, the hypothesis check
+of `:unmixed`, `big_height` and `associated_prime_heights` (for nonmonomial
+ideals) use this test instead of a primary decomposition of ``I``; a
+decomposition that is already known is used instead. For an unmixed ideal the
+big height is ``\operatorname{codim}(I)``. The answer is cached on the ideal.
+
+## Componentwise method
+
+If ``I`` is not unmixed, `:auto` refines the primary method. Let
+``I=\bigcap_P Q_P`` be an irredundant primary decomposition and ``M`` a
+defining prime. Localizing at ``M`` kills the components with
+``P\not\subseteq M``, hence
+
+```math
+I^nR_M\cap R=J^nR_M\cap R\qquad\text{whenever } JR_M=IR_M .
+```
+
+*Isolated defining primes.* If ``M`` is also a minimal prime of ``I``, only
+the ``M``-primary component ``Q_M`` survives in ``R_M``, so ``Q_MR_M=IR_M``.
+The ideal ``Q_M^n`` has ``M`` as its only minimal prime, and every other
+associated prime contains ``M`` properly and therefore has smaller dimension
+(``R/M`` is a domain). Hence the component of ``Q_M^n`` of maximal dimension
+is its ``M``-primary component, and
+
+```math
+\operatorname{hull}(Q_M^n)=Q_M^nR_M\cap R=I^nR_M\cap R .
+```
+
+If ``M`` is a maximal ideal, ``Q_M^n`` is already ``M``-primary. The isolated
+components are not grouped into one ideal (for example by height) before
+taking the power: the hull of a zero-dimensional ideal is the ideal itself, so
+the power of a group of points keeps a long product generating set, and the
+final intersection became much slower than the primary method (a line, an
+irrational point and a fat point in affine 3-space).
+
+*Embedded defining primes.* For the remaining defining primes ``M`` put
+``J=\bigcap Q_P`` over the primes ``P`` contained in one of them. Then
+``JR_M=IR_M``, and their contribution is read off a primary decomposition of
+``J^n`` with the selection rule of the primary method.
+
+``I^{(n)}`` is the intersection of these parts. If no defining prime is
+isolated, ``J=I`` and this is exactly the primary method. For the
+minimal-prime convention, and for ideals without embedded primes (for example
+radical ideals with components of different heights), every defining prime is
+isolated and no power of ``I`` is decomposed. For
+``I=(x^2+y^2-z)\cap(x-1,y-z^2,w)`` OSCAR's default decomposition of ``I^5``
+takes about a minute, whereas the two hulls take milliseconds. The method only
+uses the primary decomposition of ``I`` itself, normalized over number fields as
+described above, so it is valid over every supported field. An explicit
+`method = :primary` still decomposes ``I^n``.
 
 ## Component complete intersections
 

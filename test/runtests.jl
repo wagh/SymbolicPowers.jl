@@ -249,4 +249,5 @@ using SymbolicPowers
   include("targeted_fixes_tests.jl")
   include("monomial_engine_tests.jl")
   include("points_tests.jl")
+  include("general_paths_tests.jl")
 end

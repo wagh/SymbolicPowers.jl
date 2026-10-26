@@ -203,17 +203,18 @@ end
   @test symbolic_power(I, 2; method=:saturation) == intersect([Q^2 for Q in P]...)
   # :auto uses the saturation method in dimension one; for the minimal-prime
   # convention only when a shortcut applies (rational points, complete
-  # intersections), since saturating I^n can be much slower than :primary
+  # intersections), since saturating I^n can be much slower than the
+  # componentwise method
   @test SymbolicPowers._choose_method(ideal(R, gens(fat)), true) == :saturation
   @test SymbolicPowers._choose_method(ideal(R, [x * y, x * z]), true) == :monomial
   @test SymbolicPowers._choose_method(ideal(R, [x * y - z^2, x - y]), true) == :saturation
   pair = intersect(ideal(R, [y - z, x^2 + z^2]), P[1], P[4])
-  @test SymbolicPowers._choose_method(ideal(R, gens(pair)), true) == :primary
+  @test SymbolicPowers._choose_method(ideal(R, gens(pair)), true) == :components
   @test SymbolicPowers._choose_method(ideal(R, gens(pair)), false) == :saturation
   @test symbolic_power(ideal(R, gens(pair)), 2; use_minimal_primes=true) ==
     symbolic_power(ideal(R, gens(pair)), 2; method=:primary, use_minimal_primes=true)
   S, (a, b, c, d) = polynomial_ring(QQ, [:a, :b, :c, :d])
-  @test SymbolicPowers._choose_method(ideal(S, [a * b - c * d]), true) == :primary
+  @test SymbolicPowers._choose_method(ideal(S, [a * b - c * d]), true) == :unmixed
 end
 
 @testset "points: projective line and other weights" begin
