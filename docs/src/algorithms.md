@@ -136,17 +136,22 @@ I^nR_M\cap R=J^nR_M\cap R\qquad\text{whenever } JR_M=IR_M .
 ```
 
 *Isolated defining primes.* If ``M`` is also a minimal prime of ``I``, only
-``Q_M`` survives in ``R_M``. Group these primes by height ``h`` and set
-``I_h=\bigcap_{\operatorname{ht}M=h}Q_M``. The minimal primes of ``I_h`` are
-exactly these ``M`` (they have height ``h`` and are pairwise incomparable), and
-``I_hR_M=Q_MR_M=IR_M``. Every associated prime of ``I_h^n`` contains one of
-them, so the components of ``I_h^n`` of maximal dimension are exactly those at
-these ``M``, and
+the ``M``-primary component ``Q_M`` survives in ``R_M``, so ``Q_MR_M=IR_M``.
+The ideal ``Q_M^n`` has ``M`` as its only minimal prime, and every other
+associated prime contains ``M`` properly and therefore has smaller dimension
+(``R/M`` is a domain). Hence the component of ``Q_M^n`` of maximal dimension
+is its ``M``-primary component, and
 
 ```math
-\operatorname{hull}(I_h^n)=\bigcap_{M\text{ isolated},\ \operatorname{ht}M=h}
-\left(I^nR_M\cap R\right).
+\operatorname{hull}(Q_M^n)=Q_M^nR_M\cap R=I^nR_M\cap R .
 ```
+
+If ``M`` is a maximal ideal, ``Q_M^n`` is already ``M``-primary. The isolated
+components are not grouped into one ideal (for example by height) before
+taking the power: the hull of a zero-dimensional ideal is the ideal itself, so
+the power of a group of points keeps a long product generating set, and the
+final intersection became much slower than the primary method (a line, an
+irrational point and a fat point in affine 3-space).
 
 *Embedded defining primes.* For the remaining defining primes ``M`` put
 ``J=\bigcap Q_P`` over the primes ``P`` contained in one of them. Then

@@ -147,10 +147,10 @@ they fail.
 - `:auto` (default): the first applicable of `:monomial`, `:saturation` and
   `:unmixed` (for both conventions; unmixedness is decided by comparing `I`
   with its equidimensional hull). Otherwise a componentwise variant of
-  `:primary`: the defining primes that are minimal primes of `I` are grouped
-  by height and contribute equidimensional hulls of powers of the
-  corresponding parts of `I`; only the part of `I` below embedded defining
-  primes (if any) needs a primary decomposition of its power.
+  `:primary`: each defining prime that is a minimal prime of `I` contributes
+  the equidimensional hull of the power of its primary component; only the
+  part of `I` below embedded defining primes (if any) needs a primary
+  decomposition of its power.
 
 The zeroth symbolic power is the unit ideal; for ``n \geq 1`` the zero ideal
 and the unit ideal are their own symbolic powers.

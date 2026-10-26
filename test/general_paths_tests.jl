@@ -149,4 +149,26 @@
     @test symbolic_power(fresh(I), 5; use_minimal_primes=true) ==
       intersect(ideal(R, [f^5]), Q^5)
   end
+
+  @testset "isolated components are hulled one at a time" begin
+    # Curves with isolated (irrational or fat) points. Grouping the isolated
+    # components by height made the points' part a long product generating set
+    # (the hull of a zero-dimensional ideal is the ideal itself), and the final
+    # intersection became very slow (line + 6 points, n = 3: over 15 minutes
+    # for the primary method, 1.4 s per component).
+    R, (x, y, z) = polynomial_ring(QQ, [:x, :y, :z])
+    pt(p) = ideal(R, [x - p[1], y - p[2], z - p[3]])
+    examples = [
+      intersect(ideal(R, [7y + 4z + 2, 7x - 5z + 8]),
+        ideal(R, [z + 1, y^2 - 2, x - y]), pt([1, 1, 1])^2),
+      intersect(ideal(R, [2y - z, 7x - 9z - 3]),
+        ideal(R, [z - 4, y^2 - 3, x - 2y]), pt([1, -2, 5])^2),
+      intersect(ideal(R, [x - y, z]), pt([1, 2, 3]), pt([2, -1, 1]),
+        pt([0, 3, -1]), pt([-2, 1, 2])),
+    ]
+    for I in examples, mp in (false, true)
+      @test symbolic_power(fresh(I), 2; use_minimal_primes=mp) ==
+        symbolic_power(fresh(I), 2; method=:primary, use_minimal_primes=mp)
+    end
+  end
 end

@@ -40,24 +40,32 @@ _unmixed_shortcut(I::MPolyIdeal) = !is_monomial(I) && _is_unmixed(I)
 #   I^n R_M ∩ R = J^n R_M ∩ R   for every ideal J with J R_M = I R_M.       (*)
 #
 # 1. Defining primes M that are minimal primes of I ("isolated" targets): only
-#    Q_M survives in R_M. Group these primes by height h and put
-#    I_h = ∩_{ht M = h} Q_M. The minimal primes of I_h are exactly these M (all
-#    of height h, pairwise incomparable), and I_h R_M = Q_M R_M = I R_M. Every
-#    associated prime of I_h^n contains one of them, so the primary components
-#    of I_h^n of maximal dimension are exactly the components at these M, i.e.
-#    equidimensional_hull(I_h^n) = ∩_{ht M = h} (I^n R_M ∩ R) by (*).
+#    the M-primary component Q_M survives in R_M, so Q_M R_M = I R_M. The ideal
+#    Q_M^n has the single minimal prime M, and every other associated prime
+#    contains M properly, hence has smaller dimension (R/M is a domain). So
+#    the primary component of Q_M^n of maximal dimension is its M-primary
+#    component, i.e. equidimensional_hull(Q_M^n) = I^n R_M ∩ R by (*). If M is
+#    a maximal ideal, Q_M^n is already M-primary and is used as it is.
 # 2. The remaining (embedded) defining primes: put J = ∩ Q_P over the primes P
 #    contained in one of them. For such an M, J R_M = I R_M, so (*) and the
 #    selection rule of the primary method applied to a primary decomposition of
 #    J^n give their contribution.
 # Then I^(n) is the intersection of these parts. If no defining prime is
 # isolated, J = I and this is the primary method. Otherwise the potentially
-# hard primary decomposition of I^n is replaced by hulls of powers of the
-# isolated parts (and a decomposition of the smaller J^n). For the minimal-prime
+# hard primary decomposition of I^n is replaced by hulls of powers of single
+# components (and a decomposition of the smaller J^n). For the minimal-prime
 # convention, and for ideals without embedded primes (e.g. radical ideals of
 # mixed height), every defining prime is isolated and no power is decomposed.
 # The argument holds over every coefficient field; it only uses the
 # decomposition of I, as the primary method does.
+#
+# The isolated components are deliberately not grouped (for instance by
+# height) into one ideal whose power is then hulled: the hull of a
+# zero-dimensional ideal is the ideal itself, so the power of a group of points
+# keeps its long product generating set, and the final intersection with the
+# other parts became very slow (a line, an irrational point and a fat point in
+# affine 3-space, n = 3: 9 s against 0.7 s per component, 2.7 s for the
+# primary method; at n = 4 the grouped variant did not finish in 40 minutes).
 #
 # Not used: for an unmixed ideal of height h and an element f of the ideal of
 # h x h minors of the Jacobian with codim(I + (f)) > h, one has I^(n) =
@@ -77,11 +85,10 @@ function _symbolic_power_components(
   embedded = T[M for M in targets if !any(P -> P == M, isolated)]
   pd = _primary_decomposition(I)
   parts = T[]
-  heights = [codim(M) for M in isolated]
-  for h in unique(heights)
-    primes_h = isolated[heights .== h]
-    I_h = _intersect_all(T[Q for (Q, P) in pd if any(M -> M == P, primes_h)])
-    push!(parts, equidimensional_hull(I_h^n))
+  for M in isolated
+    # all components at M (a single one if the decomposition is irredundant)
+    Q_M = _intersect_all(T[Q for (Q, P) in pd if P == M])
+    push!(parts, dim(M) == 0 ? Q_M^n : equidimensional_hull(Q_M^n))
   end
   if !isempty(embedded)
     J = _intersect_all(T[Q for (Q, P) in pd if any(M -> is_subset(P, M), embedded)])
