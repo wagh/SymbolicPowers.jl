@@ -37,7 +37,9 @@ function is_symbolic_equal_ordinary(I::MPolyIdeal, n::Int; use_minimal_primes::B
   (n == 0 || _is_unit_ideal(I) || is_zero(I)) && return true
   !use_minimal_primes && n == 1 && return true
   if is_monomial(I)
-    return is_subset(symbolic_power(I, n; use_minimal_primes), I^n)
+    # Both minimal generating sets are canonical (src/monomial.jl).
+    return _mono_symbolic_power_exponents(I, n, use_minimal_primes) ==
+           _mono_power_exponents(I, n)
   end
   # The primes of the components kept in I^(n) form a subset S of Ass(I^n)
   # that is closed under going down; then Ass(I^(n)) = S, so I^(n) = I^n iff
@@ -80,6 +82,11 @@ function is_symbolic_power_contained_in_power(I::MPolyIdeal, m::Int, n::Int;
   if !use_minimal_primes && ZZ(m) >= ZZ(big_height(I)) * n
     return true
   end
+  if is_monomial(I)
+    return _mono_is_subset(
+      _mono_symbolic_power_exponents(I, m, use_minimal_primes), _mono_power_exponents(I, n)
+    )
+  end
   return is_subset(symbolic_power(I, m; use_minimal_primes), I^n)
 end
 
@@ -97,8 +104,16 @@ end
 function _containment_threshold(I::T, n::Int, use_minimal_primes::Bool, max_power::Int,
   cache::Dict{Int,T}) where {T<:MPolyIdeal}
   @req n <= max_power "max_power must be at least n"
-  Q = I^n
-  contained(m) = is_subset(_cached_symbolic_power!(cache, I, m, use_minimal_primes), Q)
+  # Monomial ideals: containment by divisibility of minimal generators.
+  contained = if is_monomial(I)
+    Qe = _mono_power_exponents(I, n)
+    m -> _mono_is_subset(
+      _mono_exponents(_cached_symbolic_power!(cache, I, m, use_minimal_primes)), Qe
+    )
+  else
+    Q = I^n
+    m -> is_subset(_cached_symbolic_power!(cache, I, m, use_minimal_primes), Q)
+  end
   certified = false               # is containment at `cap` known by theory?
   cap = max_power
   if !use_minimal_primes
@@ -179,12 +194,18 @@ function containment_problem(I::MPolyIdeal, n::Int; in_symbolic::Bool=false,
       Dict{Int,typeof(I)}())
   end
   S = symbolic_power(I, n; use_minimal_primes)
+  contained = if is_monomial(I)
+    Se = _mono_exponents(S)
+    k -> _mono_is_subset(Se, _mono_power_exponents(I, k))
+  else
+    k -> is_subset(S, I^k)
+  end
   # I^(n) ⊆ I^k is monotone in k, true for k = 0, false for k > n.
   lo = use_minimal_primes ? 0 : div(n, big_height(I))
   hi = n
   while lo < hi
     mid = lo + div(hi - lo + 1, 2)
-    if is_subset(S, I^mid)
+    if contained(mid)
       lo = mid
     else
       hi = mid - 1

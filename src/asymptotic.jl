@@ -24,10 +24,10 @@ function symbolic_defect(I::MPolyIdeal, n::Int; kwargs...)
   S = symbolic_power(I, n; kwargs...)
   if is_monomial(I)
     _degree_weights(base_ring(I)) # Keep the positive-grading requirement.
-    Q = I^n
     # Distinct minimal monomial generators cannot generate one another modulo
-    # a monomial subideal. Exactly those outside Q survive in S/(m*S + Q).
-    return count(m -> !(m in Q), _minimal_monomial_generators(S))
+    # a monomial subideal. Exactly those outside Q = I^n survive in
+    # S/(m*S + Q). Membership in Q is divisibility by a generator of Q.
+    return _mono_count_outside(_mono_exponents(S), _mono_power_exponents(I, n))
   end
   Ig, Sg = _graded_copies(I, S)
   T = base_ring(Ig)

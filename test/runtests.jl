@@ -247,4 +247,5 @@ using SymbolicPowers
   include("review_regressions.jl")
   include("performance_regressions.jl")
   include("targeted_fixes_tests.jl")
+  include("monomial_engine_tests.jl")
 end

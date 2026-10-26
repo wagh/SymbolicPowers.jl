@@ -21,6 +21,8 @@ julia> big_height(ideal(R, [x, y^3, z^2]))
 function big_height(I::MPolyIdeal)
   _check_ideal(I)
   @req !_is_unit_ideal(I) "the unit ideal has no associated primes"
+  # the height of a coordinate prime is the number of its variables
+  _has_monomial_generators(I) && return maximum(length, _mono_associated_supports(I))
   return maximum(codim(P) for P in _associated_primes(I))
 end
 
@@ -32,6 +34,9 @@ Return the sorted list of distinct heights of the associated primes of `I`.
 function associated_prime_heights(I::MPolyIdeal)
   _check_ideal(I)
   @req !_is_unit_ideal(I) "the unit ideal has no associated primes"
+  if _has_monomial_generators(I)
+    return sort(unique(length.(_mono_associated_supports(I))))
+  end
   return sort(unique([codim(P) for P in _associated_primes(I)]))
 end
 
@@ -52,6 +57,8 @@ true
 function minimal_part(I::MPolyIdeal)
   _check_ideal(I)
   _is_unit_ideal(I) && return I
+  # monomial ideals: the first symbolic power for the minimal-prime convention
+  _has_monomial_generators(I) && return _mono_symbolic_power(I, 1, true)
   minP = _defining_primes(I, true)
   comps = [Q for (Q, P) in _primary_decomposition(I) if any(M -> M == P, minP)]
   return _intersect_all(comps)
@@ -238,6 +245,12 @@ function _localized_components(I::T, use_minimal_primes::Bool) where {T<:MPolyId
     :symbolic_powers_maximal_localized_components
   end
   return get_attribute!(I, key) do
+    if _has_monomial_generators(I)
+      R = base_ring(I)
+      return T[
+        _mono_ideal(R, Q) for Q in _mono_localized_exponents(I, use_minimal_primes)
+      ]
+    end
     pd = _primary_decomposition(I)
     [
       _intersect_all([Q for (Q, P) in pd if is_subset(P, M)])
@@ -249,13 +262,10 @@ end
 # For a monomial ideal and a monomial prime M, (I^n) R_M ∩ R = (I R_M ∩ R)^n:
 # both are obtained by setting the variables outside M equal to 1. Hence
 # I^(n) is the intersection of the n-th powers of the localized components.
+# The computation is combinatorial, on exponent vectors (src/monomial.jl).
 function _symbolic_power_monomial(I::MPolyIdeal, n::Int, use_minimal_primes::Bool)
   @req is_monomial(I) "method :monomial requires a monomial ideal"
-  if _is_squarefree_monomial_ideal(I)
-    # all associated primes are minimal, and I R_P ∩ R = P
-    return _intersect_all([P^n for P in _minimal_primes(I)])
-  end
-  return _intersect_all([Q^n for Q in _localized_components(I, use_minimal_primes)])
+  return _mono_symbolic_power(I, n, use_minimal_primes)
 end
 
 function _symbolic_power_saturation(I::MPolyIdeal, n::Int, use_minimal_primes::Bool=false)
