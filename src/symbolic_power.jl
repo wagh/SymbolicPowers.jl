@@ -21,6 +21,8 @@ julia> big_height(ideal(R, [x, y^3, z^2]))
 function big_height(I::MPolyIdeal)
   _check_ideal(I)
   @req !_is_unit_ideal(I) "the unit ideal has no associated primes"
+  # unmixed: every associated prime has height codim(I); see `_is_unmixed`
+  _unmixed_shortcut(I) && return codim(I)
   return maximum(codim(P) for P in _associated_primes(I))
 end
 
@@ -32,6 +34,7 @@ Return the sorted list of distinct heights of the associated primes of `I`.
 function associated_prime_heights(I::MPolyIdeal)
   _check_ideal(I)
   @req !_is_unit_ideal(I) "the unit ideal has no associated primes"
+  _unmixed_shortcut(I) && return [codim(I)]
   return sort(unique([codim(P) for P in _associated_primes(I)]))
 end
 
@@ -141,9 +144,13 @@ they fail.
 - `:frobenius`: for prime ideals in positive characteristic; see
   [`symbolic_power_frobenius`](@ref).
 - `:primary`: the general method, via a primary decomposition of ``I^n``.
-- `:auto` (default): the first applicable of `:monomial`, `:saturation`,
-  `:unmixed` and `:primary` (only `:monomial` and `:primary` when
-  `use_minimal_primes = true`).
+- `:auto` (default): the first applicable of `:monomial`, `:saturation` and
+  `:unmixed` (for both conventions; unmixedness is decided by comparing `I`
+  with its equidimensional hull). Otherwise a componentwise variant of
+  `:primary`: the defining primes that are minimal primes of `I` are grouped
+  by height and contribute equidimensional hulls of powers of the
+  corresponding parts of `I`; only the part of `I` below embedded defining
+  primes (if any) needs a primary decomposition of its power.
 
 The zeroth symbolic power is the unit ideal; for ``n \geq 1`` the zero ideal
 and the unit ideal are their own symbolic powers.
@@ -190,6 +197,8 @@ function symbolic_power(I::MPolyIdeal, n::Int; method::Symbol=:auto,
     return _symbolic_power_saturation(I, n, use_minimal_primes)
   elseif method == :unmixed
     return _symbolic_power_unmixed(I, n)
+  elseif method == :components # internal, chosen by :auto only
+    return _symbolic_power_components(I, n, use_minimal_primes)
   elseif method == :complete_intersection
     return _symbolic_power_ci(I, n)
   elseif method == :join
@@ -199,15 +208,18 @@ function symbolic_power(I::MPolyIdeal, n::Int; method::Symbol=:auto,
   end
 end
 
+# The saturation and unmixed methods are valid for both conventions: the
+# saturation removes the only possible embedded prime when only minimal primes
+# are used, and an unmixed ideal has no embedded primes. The componentwise
+# method covers both conventions as well (see src/radical.jl).
 function _choose_method(I::MPolyIdeal, use_minimal_primes::Bool)
   is_monomial(I) && return :monomial
-  use_minimal_primes && return :primary
   R = base_ring(I)
   if _has_positive_z_grading(R) && _is_homogeneous_ideal(I) && dim(I) == 1
     return :saturation
   end
-  big_height(I) == codim(I) && return :unmixed
-  return :primary
+  _is_unmixed(I) && return :unmixed
+  return :components
 end
 
 # General method. For a prime M, the contraction I^n R_M ∩ R is the
@@ -272,7 +284,7 @@ function _symbolic_power_saturation(I::MPolyIdeal, n::Int, use_minimal_primes::B
 end
 
 function _symbolic_power_unmixed(I::MPolyIdeal, n::Int)
-  @req big_height(I) == codim(I) "method :unmixed requires all associated primes to have the same height"
+  @req _is_unmixed(I) "method :unmixed requires all associated primes to have the same height"
   return equidimensional_hull(I^n)
 end
 
