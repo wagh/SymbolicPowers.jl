@@ -24,7 +24,11 @@
 
 const _MonoExps = Vector{Vector{Int}}
 
-_mono_degree(a::Vector{Int}) = sum(a; init=0)
+# A vector can have Int-sized entries while its total degree exceeds Int.
+# Widening also suffices for every possible vector length: both length(a) and
+# each nonnegative entry are at most typemax(Int), so their product fits.
+const _MonoDegree = widen(Int)
+_mono_degree(a::Vector{Int}) = sum(_MonoDegree, a; init=zero(_MonoDegree))
 
 @inline function _mono_divides(a::Vector{Int}, b::Vector{Int})
   @inbounds for i in eachindex(a)
@@ -56,7 +60,7 @@ function _MonoMasker(d::Int, sets::_MonoExps...)
   for i in active
     bit >= 64 && break
     k = min(per_var, top[i], 64 - bit)
-    thresholds[i] = unique!([1 + div((j - 1) * top[i], k) for j in 1:k])
+    thresholds[i] = unique!([Int(1 + div(widemul(j - 1, top[i]), k)) for j in 1:k])
     offset[i] = bit
     bit += length(thresholds[i])
   end
@@ -105,7 +109,7 @@ function _mono_minimalize(V::_MonoExps)
   mk = _MonoMasker(length(V[1]), V)
   keep = _MonoExps()
   kmask = UInt64[]
-  kdeg = Int[]
+  kdeg = _MonoDegree[]
   last = 0
   for i in p
     v = V[i]
@@ -174,6 +178,8 @@ end
 function _mono_power(A::_MonoExps, n::Int, d::Int)
   n == 0 && return [zeros(Int, d)]
   isempty(A) && return _MonoExps()
+  n == 1 && return A
+  length(A) == 1 && return [[Base.Checked.checked_mul(n, a) for a in A[1]]]
   P = A
   for _ in 2:n
     P = _mono_product(P, A)
@@ -206,14 +212,14 @@ function _mono_intersect(A::_MonoExps, B::_MonoExps)
   nb = length(restB)
   C = Matrix{Int}(undef, d, nb)       # generators of (B' : x^a)
   cmask = Vector{UInt64}(undef, nb)
-  cdeg = Vector{Int}(undef, nb)
+  cdeg = Vector{_MonoDegree}(undef, nb)
   perm = Vector{Int}(undef, nb)
   kept = Int[]
   for i in restA
     a = A[i]
     @inbounds for (jj, j) in enumerate(restB)
       b = B[j]
-      s = 0
+      s = zero(_MonoDegree)
       for k in 1:d
         v = max(b[k] - a[k], 0)
         C[k, jj] = v
@@ -229,7 +235,7 @@ function _mono_intersect(A::_MonoExps, B::_MonoExps)
     end
   end
   X = reshape(cand, d, :)
-  deg = vec(sum(X; dims=1))
+  deg = vec(sum(_MonoDegree, X; dims=1))
   xmask = UInt64[_mono_mask(mk, X, j) for j in axes(X, 2)]
   _mono_minimal_columns!(kept, X, xmask, deg, sortperm(deg))
   res = _MonoExps([X[:, j] for j in kept])
@@ -240,7 +246,7 @@ end
 # visiting the columns in the order `perm`, which must sort them by degree. A
 # divisor has at most the same degree, and then it is equal.
 function _mono_minimal_columns!(kept::Vector{Int}, X::Matrix{Int},
-  mask::Vector{UInt64}, deg::Vector{Int}, perm::Vector{Int})
+  mask::Vector{UInt64}, deg::Vector{_MonoDegree}, perm::Vector{Int})
   empty!(kept)
   @inbounds for j in perm
     m = mask[j]
@@ -282,14 +288,14 @@ end
 function _mono_intersect_prime_power(A::_MonoExps, C::Vector{Int}, n::Int)
   out = _MonoExps()
   for a in A
-    s = 0
+    s = zero(_MonoDegree)
     for i in C
       s += a[i]
     end
     if s >= n
       push!(out, a)
     else
-      _mono_distribute!(out, a, C, n - s)
+      _mono_distribute!(out, a, C, Int(n - s))
     end
   end
   return _mono_minimalize(out)

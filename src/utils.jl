@@ -14,7 +14,15 @@ _unit_ideal(R::MPolyRing) = ideal(R, [one(R)])
 _zero_ideal(R::MPolyRing) = ideal(R, elem_type(R)[])
 _maximal_homogeneous_ideal(R::MPolyRing) = ideal(R, gens(R))
 
-_is_unit_ideal(I::MPolyIdeal) = is_one(I)
+function _is_unit_ideal(I::MPolyIdeal)
+  # Over a field, a monomial ideal is the unit ideal exactly when a supplied
+  # generator is a nonzero constant. Avoid a Gröbner basis (and its exponent
+  # limits) for this elementary test. Other presentations use OSCAR's test.
+  if coefficient_ring(base_ring(I)) isa Field && _has_monomial_generators(I)
+    return any(f -> !iszero(f) && is_constant(f), gens(I))
+  end
+  return is_one(I)
+end
 
 # Remove duplicates from a list of ideals (ideal equality is mathematical,
 # so `unique` cannot be used).

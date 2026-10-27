@@ -204,7 +204,7 @@ function containment_problem(I::MPolyIdeal, n::Int; in_symbolic::Bool=false,
   lo = use_minimal_primes ? 0 : div(n, big_height(I))
   hi = n
   while lo < hi
-    mid = lo + div(hi - lo + 1, 2)
+    mid = hi - div(hi - lo, 2) # Upper midpoint, without overflowing at the Int bound.
     if contained(mid)
       lo = mid
     else

@@ -38,6 +38,9 @@ The test suite contains
   old embedded associated prime; selecting primes by equality loses it;
 - squarefree products compared with direct ideal powering on small examples,
   and a 20-variable case for which the direct power would be impractical.
+- fat-point multiplicity products near the `Int` limit, monomial degree sums
+  larger than `Int` with valid individual exponents, and sparse presentations
+  with very large redundant monomial generators.
 
 ## Building the manual
 
@@ -107,6 +110,14 @@ it must only be used when the hypothesis is known to hold.
   into minimal primes.
 
 `benchmark/smoke.jl` prints a few timings.
+
+[`benchmark/comparison`](https://github.com/wagh/SymbolicPowers.jl/tree/main/benchmark/comparison)
+contains matched Julia/Macaulay2 benchmark scripts. The [Macaulay2 comparison](@ref)
+records the exact versions, inputs, all measured groups and limitations. Ideal
+answers are compared by equality after reconstruction from coefficients and
+exponents, outside the timed regions. Macaulay2 is also checked against
+independent corner-case answers; agreement with another implementation alone
+does not establish mathematical correctness.
 
 Measure both fresh ideals and repeated calls on the same ideal after an
 untimed warm-up. Julia compilation and package loading can dominate a first

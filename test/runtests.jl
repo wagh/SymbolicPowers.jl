@@ -250,4 +250,5 @@ using SymbolicPowers
   include("monomial_engine_tests.jl")
   include("points_tests.jl")
   include("general_paths_tests.jl")
+  include("audit_regressions.jl")
 end

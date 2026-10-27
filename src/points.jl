@@ -230,6 +230,8 @@ function _symbolic_power_points(I::MPolyIdeal, n::Int, use_minimal_primes::Bool)
   # complete intersection primes the intersection is not reliably faster (it
   # is much slower for the Fermat configuration).
   comps = _rational_point_components(I)
-  comps === nothing || return _fold_intersect([P^(n * k) for (P, k) in comps])
+  comps === nothing || return _fold_intersect([
+    P^Base.Checked.checked_mul(n, k) for (P, k) in comps
+  ])
   return saturation(I^n, _maximal_homogeneous_ideal(base_ring(I)))
 end

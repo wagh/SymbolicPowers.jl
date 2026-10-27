@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.3.5
+
+- Check the product of a symbolic exponent and a fat-point multiplicity before
+  powering. Integer wraparound could previously return a smaller, incorrect
+  power instead of reporting an exponent overflow.
+- Use widened integers for monomial degree sums, divisibility-mask threshold
+  products and coordinate-prime degree tests. Individually valid `Int`
+  exponents may have a total degree exceeding `typemax(Int)`; wrapping could
+  retain redundant generators and misclassify a squarefree ideal.
+- Decide the unit-ideal test directly for monomial generators over fields,
+  avoiding unnecessary Gröbner bases and their exponent restrictions.
+- Add large-exponent regressions and declare the `Random` test dependency.
+- Use an overflow-safe upper midpoint in reverse containment searches. Compute
+  powers of principal monomial ideals by checked scalar multiplication, so
+  sparse boundary cases do not require one multiplication per exponent.
+- Handle joins and checked power helpers directly in polynomial rings with
+  zero variables, where the only ideals are zero and the unit ideal and the
+  elimination backend cannot be used.
+- In the Frobenius helper, return the ordinary power when the supplied
+  generators certify that the prime is a complete intersection. Primality is
+  still checked. This avoids a large number of unnecessary quotients, for
+  example 199 of them for a linear prime over `GF(101)` at symbolic order two.
+- Update installation and algorithm documentation, explain arithmetic limits,
+  and add a reproducible comparison with Macaulay2, including input types and
+  cases where Macaulay2 is faster.
+
 ## 0.3.4
 
 Performance release. Results are unchanged (generator sets may differ). On a

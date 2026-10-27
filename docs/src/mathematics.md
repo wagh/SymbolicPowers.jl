@@ -63,6 +63,23 @@ The ordinary direction obeys `max_power` including at the initial exponent.
 With `in_symbolic=true`, the search lies in ``0\leq k\leq n`` and
 `max_power` does not change that search.
 
+The minimal-prime convention can give zero even at symbolic exponent two:
+
+```jldoctest
+julia> R, (x, y) = polynomial_ring(QQ, [:x, :y]);
+
+julia> I = ideal(R, [x^3, x*y]);
+
+julia> symbolic_power(I, 2; use_minimal_primes=true) == ideal(R, [x^2])
+true
+
+julia> containment_problem(I, 2; in_symbolic=true, use_minimal_primes=true)
+0
+```
+
+Indeed ``x^2\notin I``, so the usual all-associated-prime lower bound for
+the reverse search must not be used for this convention.
+
 ## Degrees and Waldschmidt constants
 
 Degree routines require homogeneous ideals in a positive integer grading.

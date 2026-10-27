@@ -19,7 +19,11 @@ using Pkg
 Pkg.develop(path = "/path/to/SymbolicPowers.jl")
 ```
 
-or, from the published repository, `Pkg.add(url = "<repository URL>")`.
+or, from the published repository:
+
+```julia
+Pkg.add(url = "https://github.com/wagh/SymbolicPowers.jl")
+```
 
 ## Quick start
 
@@ -62,10 +66,10 @@ The zeroth symbolic power is the unit ideal.
 
 | `method` | Requirements (checked) | Algorithm |
 |:--|:--|:--|
-| `:auto` | – | first applicable of `:monomial`, `:saturation`, `:unmixed`, `:primary` |
+| `:auto` | – | monomial engine, dimension-one shortcuts, unmixed hull, or componentwise localization |
 | `:primary` | – | primary decomposition of `I^n`, keep the components localizing correctly |
 | `:monomial` | monomial ideal | powers of the localized components (Cooper–Embree–Hà–Hoefel) |
-| `:saturation` | homogeneous, `dim R/I = 1` | saturate `I^n` at the irrelevant ideal |
+| `:saturation` | homogeneous, `dim R/I = 1` | complete-intersection or certified rational fat-point shortcut; otherwise saturate at the irrelevant ideal, respecting embedded primes |
 | `:unmixed` | all associated primes of equal height | equidimensional hull of `I^n` |
 | `:complete_intersection` | components are complete intersections of height `codim(I)` | intersect their powers |
 | `:join` | radical; characteristic 0 or finite field | Zariski–Nagata: the join `I ⋆ m^n` |
@@ -73,6 +77,12 @@ The zeroth symbolic power is the unit ideal.
 
 A method whose requirements fail throws an `ArgumentError`; no other method is
 substituted silently.
+
+Both symbolic conventions use the monomial and unmixed shortcuts. Under the
+minimal-prime convention, automatic dimension-one selection uses `:saturation`
+only when the complete-intersection or rational fat-point shortcut applies;
+otherwise it uses the componentwise method. This retains isolated components
+of every height, unlike taking one equidimensional hull of a mixed ideal.
 
 ## Exact values, bounds and samples
 
@@ -113,7 +123,10 @@ algorithm.
 - Over number fields, redundant backend primary components are removed before
   their radicals are used as associated primes; normalization is cached.
 - Nontrivial ideal powers inherit the exponent and resource limits of the
-  OSCAR/Singular backend.
+  OSCAR/Singular backend. Fat-point exponent products are checked for integer
+  overflow. The monomial engine uses widened integers for degree comparisons;
+  degree invariants returning `Int` still raise an overflow error if their
+  result does not fit.
 - `is_packed` examines up to `3^a` minors, where `a` is the number of variables
   occurring in the generators.
 
@@ -132,6 +145,12 @@ cover the zero and unit ideals, embedded primes, weighted and multigraded
 rings, number fields (including redundant primary decompositions), independent
 Hasse-derivative tests, and positive characteristic. The CI also checks
 JuliaFormatter 1.0.62 formatting with OSCAR's settings.
+
+See [the Macaulay2 comparison](docs/src/comparison.md) for measured examples,
+the complete benchmark procedure and the cases where Macaulay2 was faster.
+Benchmark scripts are in [`benchmark/comparison`](benchmark/comparison).
+Times depend on the coefficient field, generators, input representation,
+chosen method and whether the ideal object is reused.
 
 ## References
 

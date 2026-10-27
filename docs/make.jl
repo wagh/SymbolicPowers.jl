@@ -6,6 +6,7 @@ DocMeta.setdocmeta!(SymbolicPowers, :DocTestSetup,
   :(using Oscar, SymbolicPowers); recursive=true)
 
 makedocs(;
+  root=@__DIR__,
   modules=[SymbolicPowers],
   sitename="SymbolicPowers.jl",
   format=Documenter.HTML(; prettyurls=get(ENV, "CI", "false") == "true",
@@ -18,5 +19,6 @@ makedocs(;
     "Algorithms and guarantees" => "algorithms.md",
     "API" => "api.md",
     "Development and validation" => "development.md",
+    "Macaulay2 comparison" => "comparison.md",
   ],
 )
