@@ -2,6 +2,9 @@
 
 ## 0.3.5
 
+- Expand `examples` with twelve independent topic scripts covering every
+  exported function, a mathematical guide and an isolated all-examples runner.
+  Check the examples in CI on each supported test configuration.
 - Check the product of a symbolic exponent and a fat-point multiplicity before
   powering. Integer wraparound could previously return a smaller, incorrect
   power instead of reporting an exponent overflow.

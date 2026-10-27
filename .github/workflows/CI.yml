@@ -48,6 +48,8 @@ jobs:
         run: julia --project=. -e 'using Pkg; Pkg.add(PackageSpec(name="Oscar", version=ENV["OSCAR_TEST_VERSION"]))'
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
+      - name: Run worked examples
+        run: julia --startup-file=no --project=. examples/run_all.jl
 
   docs:
     name: Manual and doctests

@@ -132,6 +132,13 @@ algorithm.
 
 ## Tests and documentation
 
+The [`examples`](examples/README.md) directory contains independent worked
+examples covering every exported function: methods, embedded and mixed ideals,
+points and curves, containment, joins, positive characteristic, number fields,
+gradings, polyhedra, bounds, regularity and packing. Each file explains the
+mathematics and asserts the expected answers. Run them all from the package
+root with `julia --project=. examples/run_all.jl`.
+
 ```sh
 julia --project=. -e 'using Pkg; Pkg.test()'
 julia --project=docs -e 'using Pkg; Pkg.develop(path="."); Pkg.instantiate()'

@@ -63,6 +63,20 @@ The [Mathematical guide](@ref) states the definitions and conventions, and
 [Algorithms and guarantees](@ref) proves the correctness of every method.
 The changes between versions are listed in `CHANGELOG.md`.
 
+## Runnable examples
+
+The [examples directory](https://github.com/wagh/SymbolicPowers.jl/tree/main/examples)
+contains independent scripts covering every exported function. Its README
+maps functions to worked examples, including curves, fat points, embedded
+primes, coefficient fields, weighted gradings, containment and packing.
+Each script prints its results and checks mathematical expectations.
+From the package root, run one file or the complete collection:
+
+```sh
+julia --project=. examples/curves.jl
+julia --project=. examples/run_all.jl
+```
+
 ## Package overview
 
 ```@docs
